@@ -1,5 +1,6 @@
 from common import BaseAPI
 
+
 class PeerApis(BaseAPI):
     def peer_probe(self, host):
         """

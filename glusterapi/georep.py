@@ -1,5 +1,6 @@
 from common import BaseAPI
 
+
 class GeorepApis(BaseAPI):
     def georep_create(self, mastervol, remotehost,
                       remotevol, remoteuser="root"):
@@ -122,4 +123,3 @@ class GeorepApis(BaseAPI):
         :raises: GlusterAPIError or failure
         """
         pass
-

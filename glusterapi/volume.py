@@ -24,7 +24,7 @@ class VolumeApis(BaseAPI):
         if size > 0 and len(bricks) > 0:
             raise GlusterApiInvalidInputs()
 
-        data={
+        data = {
             "name": volname
         }
         self._handle_request(self._post, 201, "/v1/volumes", data=data)
@@ -65,9 +65,6 @@ class VolumeApis(BaseAPI):
         :param force: (bool) Restart the Volume with Force
         :raises: GlusterAPIError or failure
         """
-        data = {
-            "force": force
-        }
         self.volume_stop(volname, force)
         self.volume_start(volname, force)
 
