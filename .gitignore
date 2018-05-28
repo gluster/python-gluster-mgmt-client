@@ -1,1 +1,11 @@
 *.pyc
+*.pyo
+
+# editor artifacts
+.*swp
+*~
+
+# test artifacts
+.tox
+.coverage
+*.egg-info
