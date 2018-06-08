@@ -10,4 +10,5 @@ setup(
     author_email='gluster-devel@gluster.org',
     url='https://github.com/gluster/glusterapi-python',
     packages=find_packages(exclude=['test', 'bin']),
+    install_requires=['pyjwt', 'requests', 'pytest'],
 )
