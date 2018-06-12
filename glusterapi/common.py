@@ -7,16 +7,23 @@ import jwt
 import requests
 
 from glusterapi.exceptions import GlusterApiError
+from glusterapi.exceptions import GlusterApiInvalidInputs
 
 
-def validate_uuid(brick_id):
+def validate_uuid(brick_id, version=4):
     try:
-        UUID(brick_id, version=4)
+        UUID(brick_id, version=version)
     except ValueError:
         # If it's a value error, then the string
         # is not a valid hex code for a UUID.
         return False
     return True
+
+
+def validate_volume_name(vol_name):
+    vol_name = vol_name.strip()
+    if not vol_name:
+        raise GlusterApiInvalidInputs("Volume name cannot be empty")
 
 
 class BaseAPI(object):

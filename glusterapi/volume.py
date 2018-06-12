@@ -2,23 +2,26 @@
 import httplib
 import json
 
-from glusterapi.common import BaseAPI, validate_uuid
+from glusterapi.common import BaseAPI, validate_uuid, validate_volume_name
 from glusterapi.exceptions import GlusterApiInvalidInputs
 
-
-# TODO check type
 
 class TransportType(object):
     TCP = "tcp"
     RDMA = "rdma"
     Both = "tcp,rdma"
 
+    def check(self, transport_type):
+        if transport_type not in (self.TCP, self.RDMA, self.Both):
+            raise GlusterApiInvalidInputs(
+                "Transport type %s not supported" % transport_type)
+
 
 def validate_brick(bricks=None):
     """
     Validate brick pattern.
 
-    :param bricks: (string) in the form of nodeid:brickpath
+    :param bricks: (list) in the form of ["nodeid:brickpath"]
     :return brick_req: (list) list of bricks
     """
     brick_req = []
@@ -38,14 +41,14 @@ def validate_brick(bricks=None):
 
 
 class VolumeApis(BaseAPI):
-    def volume_create(self, volname, bricks=None,
+    def volume_create(self, volume_name="", bricks=None,
                       transport=TransportType.TCP, replica=0, disperse=0,
                       disperse_data=0, disperse_redundancy=0,
                       arbiter=0, force=False, options=None):
         """
         Create Gluster Volume.
 
-        :param volname: (string) Volume Name
+        :param volume_name: (string) Volume Name
         :param bricks:  (list)  list of bricks
         :param transport (string) brick transport
         :param replica  (int) replica count
@@ -65,6 +68,9 @@ class VolumeApis(BaseAPI):
             raise GlusterApiInvalidInputs("Invalid Brick details, bricks "
                                           "should be in form of "
                                           "<peerid>:<path>")
+
+        t = TransportType()
+        t.check(transport)
 
         num_bricks = len(bricks)
         sub_volume = []
@@ -112,7 +118,7 @@ class VolumeApis(BaseAPI):
             options = dict()
 
         data = {
-            "name": volname,
+            "name": volume_name,
             "subvols": sub_volume,
             "transport": transport,
             "options": options,
@@ -131,6 +137,8 @@ class VolumeApis(BaseAPI):
         :param force: (bool) Start Volume with Force
         :raises: GlusterAPIError or failure
         """
+        validate_volume_name(vol_name)
+
         data = {
             "force-start-bricks": force
         }
@@ -145,6 +153,8 @@ class VolumeApis(BaseAPI):
         :param vol_name: (string) Volume Name
         :raises: GlusterAPIError or failure
         """
+        validate_volume_name(vol_name)
+
         return self._handle_request(self._post, httplib.OK,
                                     "/v1/volumes/%s/stop" % vol_name, None)
 
@@ -156,6 +166,8 @@ class VolumeApis(BaseAPI):
         :param force: (bool) Restart the Volume with Force
         :raises: GlusterAPIError or failure
         """
+        validate_volume_name(vol_name)
+
         self.volume_stop(vol_name)
         return self.volume_start(vol_name, force)
 
@@ -163,9 +175,11 @@ class VolumeApis(BaseAPI):
         """
         Start Gluster Volume.
 
-        :param volname: (string) Volume Name
+        :param vol_name: (string) Volume Name
         :raises: GlusterAPIError or failure
         """
+        validate_volume_name(vol_name)
+
         return self._handle_request(self._delete, httplib.NO_CONTENT,
                                     "/v1/volumes/%s" % vol_name, None)
 
@@ -183,14 +197,16 @@ class VolumeApis(BaseAPI):
         :param deprecated: (bool) deprecated flag to set options
         :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
+        validate_volume_name(vol_name)
+
         if options is None:
             raise GlusterApiInvalidInputs("cannot set empty options")
 
-        voloptions = dict()
+        vol_options = dict()
         req = dict()
         for key in options:
-            voloptions[key] = options[key]
-        req['options'] = voloptions
+            vol_options[key] = options[key]
+        req['options'] = vol_options
         req['advanced'] = advance
         req['experimental'] = experimental
         req['deprecated'] = deprecated
@@ -202,29 +218,35 @@ class VolumeApis(BaseAPI):
         """
         Start Gluster Volume.
 
-        :param volname: (string) Volume Name
+        :param vol_name: (string) Volume Name
         :param options: (dict) options to set on volume
         :raises: GlusterAPIError or failure
         """
-        pass
+        validate_volume_name(vol_name)
+
+        # TODO need to be implemented
 
     def volume_info(self, vol_name):
         """
         Gluster Volume Info.
 
-        :param volname: (string) Volume Name
+        :param vol_name: (string) Volume Name
         :raises: GlusterAPIError on failure
         """
+        validate_volume_name(vol_name)
+
         return self._handle_request(self._get, httplib.OK,
                                     '/v1/volumes/%s/bricks' % vol_name)
 
-    def volume_status(self, vol_name=None):
+    def volume_status(self, vol_name):
         """
         Gluster Volume Status.
 
         :param vol_name: (string) Volume Name
         :raises: GlusterAPIError on failure
         """
+        validate_volume_name(vol_name)
+
         return self._handle_request(self._get, httplib.OK,
                                     '/v1/volumes/%s/status' % vol_name)
 
@@ -236,4 +258,6 @@ class VolumeApis(BaseAPI):
         :param options: (dict) get volumes based on options
         :raises: GlusterAPIError on failure
         """
-        pass
+        validate_volume_name(vol_name)
+
+        # TODO need to be implemented

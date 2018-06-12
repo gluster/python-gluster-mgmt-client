@@ -5,8 +5,13 @@ from glusterapi.common import BaseAPI, validate_uuid
 from glusterapi.exceptions import GlusterApiInvalidInputs
 
 
+def validate_peer_id(peerid):
+    if validate_uuid(peerid) is False:
+        raise GlusterApiInvalidInputs("Invalid peer id specified")
+
+
 class DeviceApis(BaseAPI):
-    def device_add(self, peerid="", device=""):
+    def device_add(self, peerid, device):
         """
         Gluster device add.
 
@@ -14,8 +19,7 @@ class DeviceApis(BaseAPI):
         :param device: (string) device name
         :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
-        if validate_uuid(peerid) is False:
-            raise GlusterApiInvalidInputs("Invalid host id specified")
+        validate_peer_id(peerid)
         device = device.strip()
         if not device:
             raise GlusterApiInvalidInputs("Invalid device specified")
@@ -30,8 +34,9 @@ class DeviceApis(BaseAPI):
         Gluster get devices in peer.
 
         :param peerid: (string) peerid returned from peer_add
-        :raises: GlusterApiError on failure
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
+        validate_peer_id(peerid)
         url = "/v1/devices/" + peerid
         return self._handle_request(self._get, httplib.OK, url)
 

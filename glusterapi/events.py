@@ -5,7 +5,7 @@ from glusterapi.common import BaseAPI
 
 
 class EventsApis(BaseAPI):
-    def webhook_add(self, url="", token="", secret=""):
+    def webhook_add(self, url, token, secret):
         """
         Gluster add webhook.
 
@@ -22,7 +22,7 @@ class EventsApis(BaseAPI):
         return self._handle_request(self._post, httplib.OK,
                                     "/v1/events/webhook", json.dumps(req))
 
-    def webhook_delete(self, url=""):
+    def webhook_delete(self, url):
         """
         Gluster delete webhook.
 
