@@ -1,3 +1,4 @@
+
 import datetime
 import hashlib
 from uuid import UUID
@@ -5,7 +6,7 @@ from uuid import UUID
 import jwt
 import requests
 
-from exceptions import GlusterApiError
+from glusterapi.exceptions import GlusterApiError
 
 
 def validate_uuid(brick_id):
@@ -19,7 +20,8 @@ def validate_uuid(brick_id):
 
 
 class BaseAPI(object):
-    def __init__(self, endpoint='http://127.0.0.1:24007', user=None, secret=None, verify=False):
+    def __init__(self, endpoint='http://127.0.0.1:24007', user=None,
+                 secret=None, verify=False):
         self.base_url = endpoint
         self.user = user
         self.secret = secret
@@ -38,7 +40,8 @@ class BaseAPI(object):
         claims['iat'] = datetime.datetime.utcnow()
 
         # Expiration time
-        claims['exp'] = datetime.datetime.utcnow() + datetime.timedelta(seconds=1)
+        claims['exp'] = datetime.datetime.utcnow() + datetime.timedelta(
+            seconds=1)
 
         # URI tampering protection
         val = b'%s&%s' % (method.encode('utf8'), uri.encode('utf8'))
@@ -51,19 +54,23 @@ class BaseAPI(object):
 
     def _get(self, url):
         headers = self._set_token_in_header('GET', url)
-        return requests.get(self.base_url + url, headers=headers, verify=self.verify)
+        return requests.get(self.base_url + url, headers=headers,
+                            verify=self.verify)
 
     def _post(self, url, data):
         headers = self._set_token_in_header('POST', url)
-        return requests.post(self.base_url + url, data=data, headers=headers, verify=self.verify)
+        return requests.post(self.base_url + url, data=data, headers=headers,
+                             verify=self.verify)
 
     def _delete(self, url, data):
         headers = self._set_token_in_header('DELETE', url)
-        return requests.delete(self.base_url + url, data=data, headers=headers, verify=self.verify)
+        return requests.delete(self.base_url + url, data=data, headers=headers,
+                               verify=self.verify)
 
     def _put(self, url, data):
         headers = self._set_token_in_header('PUT', url)
-        return requests.put(self.base_url + url, data=data, headers=headers, verify=self.verify)
+        return requests.put(self.base_url + url, data=data, headers=headers,
+                            verify=self.verify)
 
     @staticmethod
     def _handle_request(func, expected_status_code, *args, **kwargs):
@@ -74,5 +81,5 @@ class BaseAPI(object):
 
         if resp.status_code == 204:
             return resp.status_code, {}
-        else:
-            return resp.status_code, resp.json()
+
+        return resp.status_code, resp.json()
