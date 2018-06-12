@@ -1,10 +1,21 @@
 import datetime
 import hashlib
+from uuid import UUID
 
 import jwt
 import requests
 
 from exceptions import GlusterApiError
+
+
+def validate_uuid(brick_id):
+    try:
+        UUID(brick_id, version=4)
+    except ValueError:
+        # If it's a value error, then the string
+        # is not a valid hex code for a UUID.
+        return False
+    return True
 
 
 class BaseAPI(object):
