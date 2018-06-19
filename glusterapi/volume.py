@@ -1,132 +1,263 @@
-from common import BaseAPI
-from exceptions import GlusterApiInvalidInputs
+"""This module contains the python  glusterd2 volume api's implementation."""
+import httplib
+import json
+
+from glusterapi.common import BaseAPI, validate_uuid, validate_volume_name
+from glusterapi.exceptions import GlusterApiInvalidInputs
 
 
-class TransportType:
+class TransportType(object):
     TCP = "tcp"
     RDMA = "rdma"
     Both = "tcp,rdma"
 
+    def check(self, transport_type):
+        if transport_type not in (self.TCP, self.RDMA, self.Both):
+            raise GlusterApiInvalidInputs(
+                "Transport type %s not supported" % transport_type)
+
+
+def validate_brick(bricks=None):
+    """
+    Validate brick pattern.
+
+    :param bricks: (list) in the form of ["nodeid:brickpath"]
+    :return brick_req: (list) list of bricks
+    """
+    brick_req = []
+    if bricks is None:
+        return None
+    for brick in bricks:
+        brk = brick.split(":")
+        if len(brk) != 2:
+            return None
+        if validate_uuid(brk[0]) is False:
+            return None
+        req = dict()
+        req['peerid'] = brk[0]
+        req['path'] = brk[1]
+        brick_req.append(req)
+    return brick_req
+
 
 class VolumeApis(BaseAPI):
-    def volume_create(self, volname, size=0, bricks=[],
-                      transport=TransportType.TCP,
-                      replica=None,
-                      disperse=None,
-                      arbiter=None,
-                      force=False):
+    def volume_create(self, volume_name="", bricks=None,
+                      transport=TransportType.TCP, replica=0, disperse=0,
+                      disperse_data=0, disperse_redundancy=0,
+                      arbiter=0, force=False, options=None):
         """
-        Create Gluster Volume
+        Create Gluster Volume.
 
-        :param volname: (string) Volume Name
-        :raises: GlusterAPIError or failure
+        :param volume_name: (string) Volume Name
+        :param bricks:  (list)  list of bricks
+        :param transport (string) brick transport
+        :param replica  (int) replica count
+        :param disperse (int) disperse count
+        :param disperse_data (int) disperse_data count
+        :param disperse_redundancy (int) disperse_redundancy count
+        :param arbiter  (int) arbiter count
+        :param force  (bool)  force flag
+        :param options (dict) volume options
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
-        if size > 0 and len(bricks) > 0:
+        if len(bricks) <= 0:
             raise GlusterApiInvalidInputs()
+        req_bricks = validate_brick(bricks)
+
+        if req_bricks is None:
+            raise GlusterApiInvalidInputs("Invalid Brick details, bricks "
+                                          "should be in form of "
+                                          "<peerid>:<path>")
+
+        t = TransportType()
+        t.check(transport)
+
+        num_bricks = len(bricks)
+        sub_volume = []
+
+        if replica > 0:
+            if num_bricks % replica != 0:
+                raise GlusterApiInvalidInputs(
+                    "Invalid number of bricks specified")
+
+            num_subvol = num_bricks / replica
+            for i in range(0, num_subvol):
+                idx = i * replica
+                # If Arbiter is set, set it as Brick Type for last brick
+                if arbiter > 0:
+                    req_bricks[idx * replica - 1]['type'] = 'arbiter'
+                subvol_req = dict()
+                subvol_req['type'] = 'replicate'
+                subvol_req['bricks'] = req_bricks[idx:idx + replica]
+                subvol_req['replica'] = replica
+                subvol_req['arbiter'] = arbiter
+                sub_volume.append(subvol_req)
+        elif disperse > 0:
+            subvol_size = disperse
+            if num_bricks % subvol_size != 0:
+                raise GlusterApiInvalidInputs(
+                    "Invalid number of bricks specified")
+
+            num_subvols = num_bricks / subvol_size
+            for i in range(0, num_subvols):
+                idx = i * subvol_size
+                subvol_req = dict()
+                subvol_req['type'] = 'disperse'
+                subvol_req['bricks'] = req_bricks[idx:idx + subvol_size]
+                subvol_req['disperse-count'] = disperse
+                subvol_req['disperse-data'] = disperse_data
+                subvol_req['disperse-redundancy'] = disperse_redundancy
+                sub_volume.append(subvol_req)
+        else:
+            subvol_req = dict()
+            subvol_req['type'] = 'distrubute'
+            subvol_req['bricks'] = req_bricks
+            sub_volume.append(subvol_req)
+
+        if options is None:
+            options = dict()
 
         data = {
-            "name": volname
+            "name": volume_name,
+            "subvols": sub_volume,
+            "transport": transport,
+            "options": options,
+            "force": force,
+
         }
-        self._handle_request(self._post, 201, "/v1/volumes", data=data)
 
-    def volume_start(self, volname, force=False):
+        return self._handle_request(self._post, httplib.CREATED,
+                                    "/v1/volumes", data=json.dumps(data))
+
+    def volume_start(self, vol_name, force=False):
         """
-        Start Gluster Volume
+        Start Gluster Volume.
 
-        :param volname: (string) Volume Name
+        :param vol_name: (string) Volume Name
         :param force: (bool) Start Volume with Force
         :raises: GlusterAPIError or failure
         """
+        validate_volume_name(vol_name)
+
         data = {
-            "force": force
+            "force-start-bricks": force
         }
-        self._handle_request(self._post, 200,
-                             "/v1/volumes/%s/start" % volname, data=data)
+        return self._handle_request(self._post, httplib.OK,
+                                    "/v1/volumes/%s/start" % vol_name,
+                                    data=json.dumps(data))
 
-    def volume_stop(self, volname, force=False):
+    def volume_stop(self, vol_name):
         """
-        Start Gluster Volume
+        Start Gluster Volume.
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
+        :param vol_name: (string) Volume Name
         :raises: GlusterAPIError or failure
         """
-        data = {
-            "force": force
-        }
-        self._handle_request(self._post, 200,
-                             "/v1/volumes/%s/stop" % volname, data=data)
+        validate_volume_name(vol_name)
 
-    def volume_restart(self, volname, force=False):
+        return self._handle_request(self._post, httplib.OK,
+                                    "/v1/volumes/%s/stop" % vol_name, None)
+
+    def volume_restart(self, vol_name, force=False):
         """
-        Restart Gluster Volume
+        Restart Gluster Volume.
 
-        :param volname: (string) Volume Name
+        :param vol_name: (string) Volume Name
         :param force: (bool) Restart the Volume with Force
         :raises: GlusterAPIError or failure
         """
-        self.volume_stop(volname, force)
-        self.volume_start(volname, force)
+        validate_volume_name(vol_name)
 
-    def volume_delete(self, volname, force=False):
+        self.volume_stop(vol_name)
+        return self.volume_start(vol_name, force)
+
+    def volume_delete(self, vol_name):
         """
-        Start Gluster Volume
+        Start Gluster Volume.
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
+        :param vol_name: (string) Volume Name
         :raises: GlusterAPIError or failure
         """
-        data = {
-            "force": force
-        }
-        self._handle_request(self._delete, 200,
-                             "/v1/volumes/%s" % volname, data=data)
+        validate_volume_name(vol_name)
 
-    def volume_set(self, volname, optname, optvalue):
+        return self._handle_request(self._delete, httplib.NO_CONTENT,
+                                    "/v1/volumes/%s" % vol_name, None)
+
+    def volume_set(self, vol_name, options=None,
+                   advance=False,
+                   experimental=False,
+                   deprecated=False):
         """
-        Start Gluster Volume
+        Start Gluster Volume.
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
+        :param vol_name: (string) Volume Name
+        :param options: (dict) options to set on volume
+        :param advance: (bool) advance flag to set options
+        :param experimental: (bool) experimental flag to set options
+        :param deprecated: (bool) deprecated flag to set options
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
+        """
+        validate_volume_name(vol_name)
+
+        if options is None:
+            raise GlusterApiInvalidInputs("cannot set empty options")
+
+        vol_options = dict()
+        req = dict()
+        for key in options:
+            vol_options[key] = options[key]
+        req['options'] = vol_options
+        req['advanced'] = advance
+        req['experimental'] = experimental
+        req['deprecated'] = deprecated
+        return self._handle_request(self._post, httplib.OK,
+                                    "/v1/volumes/%s/options" % vol_name,
+                                    json.dumps(req))
+
+    def volume_reset(self, vol_name, options=None):
+        """
+        Start Gluster Volume.
+
+        :param vol_name: (string) Volume Name
+        :param options: (dict) options to set on volume
         :raises: GlusterAPIError or failure
         """
-        pass
+        validate_volume_name(vol_name)
 
-    def volume_reset(self, volname, optnames=[]):
-        """
-        Start Gluster Volume
+        # TODO need to be implemented
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
-        :raises: GlusterAPIError or failure
+    def volume_info(self, vol_name):
         """
-        pass
+        Gluster Volume Info.
 
-    def volume_info(self, volname=None):
+        :param vol_name: (string) Volume Name
+        :raises: GlusterAPIError on failure
         """
-        Gluster Volume Info
+        validate_volume_name(vol_name)
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
-        :raises: GlusterAPIError or failure
-        """
-        pass
+        return self._handle_request(self._get, httplib.OK,
+                                    '/v1/volumes/%s/bricks' % vol_name)
 
-    def volume_status(self, volname=None):
+    def volume_status(self, vol_name):
         """
-        Gluster Volume Status
+        Gluster Volume Status.
 
-        :param volname: (string) Volume Name
-        :raises: GlusterAPIError or failure
+        :param vol_name: (string) Volume Name
+        :raises: GlusterAPIError on failure
         """
-        pass
+        validate_volume_name(vol_name)
 
-    def volume_get(self, volname, optnames=[]):
-        """
-        Get Gluster Volume Options
+        return self._handle_request(self._get, httplib.OK,
+                                    '/v1/volumes/%s/status' % vol_name)
 
-        :param volname: (string) Volume Name
-        :param force: (bool) Stop Volume with Force
-        :raises: GlusterAPIError or failure
+    def volume_get(self, vol_name, options=None):
         """
-        pass
+        Get Gluster Volume Options.
+
+        :param vol_name: (string) Volume Name
+        :param options: (dict) get volumes based on options
+        :raises: GlusterAPIError on failure
+        """
+        validate_volume_name(vol_name)
+
+        # TODO need to be implemented
