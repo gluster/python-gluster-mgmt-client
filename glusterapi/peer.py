@@ -8,10 +8,12 @@ from glusterapi.exceptions import GlusterApiInvalidInputs
 class PeerApis(BaseAPI):
     def peer_add(self, host, metadata=None, zone=""):
         """
-        Gluster Peer Add
+        Gluster Peer Add.
 
         :param host: (string) Hostname or IP
-        :raises: GlusterApiError on failure
+        :param metadata: (dictionary of string: string) peer info mapping
+        :param zone: (string) Time-zone where the node belongs to
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
         if not host:
             raise GlusterApiInvalidInputs("Hostname cannot be empty")
@@ -27,10 +29,10 @@ class PeerApis(BaseAPI):
 
     def peer_remove(self, peerid):
         """
-        Gluster Peer Remove
+        Gluster Peer Remove.
 
-        :param host: (string) Hostname or IP
-        :raises: GlusterApiError on failure
+        :param peerid: (string) Peer ID of the node
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
         if not peerid:
             raise GlusterApiInvalidInputs("Peer ID cannot be empty")
@@ -39,7 +41,7 @@ class PeerApis(BaseAPI):
 
     def peer_status(self):
         """
-        Gluster Peer Status
+        Gluster Peer Status.
 
         :raises: GlusterApiError on failure
         """
