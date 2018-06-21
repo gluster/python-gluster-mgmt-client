@@ -70,7 +70,6 @@ def test_peer_add(gd2client):
 def test_peer_status(gd2client):
     """Test for peer status."""
     status, _ = gd2client.peer_status()
-    # assert resp[0]['id'] == Peer.get_peer_id)
     assert status == 200
 
 
