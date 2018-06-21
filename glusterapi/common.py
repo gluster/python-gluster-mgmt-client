@@ -19,6 +19,9 @@ def validate_uuid(brick_id, version=4):
         return False
     return True
 
+def validate_peer_id(peerid):
+    if validate_uuid(peerid) is False:
+        raise GlusterApiInvalidInputs("Invalid peer id specified")
 
 def validate_volume_name(vol_name):
     vol_name = vol_name.strip()

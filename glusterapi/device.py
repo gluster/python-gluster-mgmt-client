@@ -1,13 +1,8 @@
 import httplib
 import json
 
-from glusterapi.common import BaseAPI, validate_uuid
+from glusterapi.common import BaseAPI, validate_peer_id
 from glusterapi.exceptions import GlusterApiInvalidInputs
-
-
-def validate_peer_id(peerid):
-    if validate_uuid(peerid) is False:
-        raise GlusterApiInvalidInputs("Invalid peer id specified")
 
 
 class DeviceApis(BaseAPI):
