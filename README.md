@@ -1,6 +1,7 @@
 # python-gluster-mgmt-client
 
-Python bindings for gluster management APIs
+python-gluster-mgmt-client provides python bindings for the GlusterD-2.0 APIs.
+GlusterD-2.0 is the upcoming rewrite of the Gluster management service.
 
 ## Documentation
 * [Quick Start User Guide](doc/quick-start-user-guide.md)
