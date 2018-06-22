@@ -1,17 +1,19 @@
 import httplib
 import json
 
-from glusterapi.common import BaseAPI
+from glusterapi.common import BaseAPI, validate_peer_id
 from glusterapi.exceptions import GlusterApiInvalidInputs
 
 
 class PeerApis(BaseAPI):
     def peer_add(self, host, metadata=None, zone=""):
         """
-        Gluster Peer Add
+        Gluster Peer Add.
 
         :param host: (string) Hostname or IP
-        :raises: GlusterApiError on failure
+        :param metadata: (dictionary) custom key:value metadata for peers
+        :param zone: (string) Time-zone where the node belongs to
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
         if not host:
             raise GlusterApiInvalidInputs("Hostname cannot be empty")
@@ -27,19 +29,18 @@ class PeerApis(BaseAPI):
 
     def peer_remove(self, peerid):
         """
-        Gluster Peer Remove
+        Gluster Peer Remove.
 
-        :param host: (string) Hostname or IP
-        :raises: GlusterApiError on failure
+        :param peerid: (string) Peer ID of the node
+        :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
-        if not peerid:
-            raise GlusterApiInvalidInputs("Peer ID cannot be empty")
-        url = "/v1/peers" + peerid
+        validate_peer_id(peerid)
+        url = "/v1/peers/" + peerid
         return self._handle_request(self._delete, httplib.NO_CONTENT, url, None)
 
     def peer_status(self):
         """
-        Gluster Peer Status
+        Gluster Peer Status.
 
         :raises: GlusterApiError on failure
         """
