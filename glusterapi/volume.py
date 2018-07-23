@@ -41,10 +41,11 @@ def validate_brick(bricks=None):
 
 
 class VolumeApis(BaseAPI):
-    def volume_create(self, volume_name="", bricks=None,
+    def volume_create(self, bricks, volume_name="",
                       transport=TransportType.TCP, replica=0, disperse=0,
                       disperse_data=0, disperse_redundancy=0,
-                      arbiter=0, force=False, options=None):
+                      arbiter=0, force=False, options=None, metadata=None,
+                      ):
         """
         Create Gluster Volume.
 
@@ -58,9 +59,10 @@ class VolumeApis(BaseAPI):
         :param arbiter  (int) arbiter count
         :param force  (bool)  force flag
         :param options (dict) volume options
+        :param metadata (dict) volume metadata
         :raises: GlusterApiError or GlusterApiInvalidInputs on failure
         """
-        if len(bricks) <= 0:
+        if bricks is None or len(bricks) <= 0:
             raise GlusterApiInvalidInputs()
         req_bricks = validate_brick(bricks)
 
@@ -123,6 +125,7 @@ class VolumeApis(BaseAPI):
             "transport": transport,
             "options": options,
             "force": force,
+            "metadata": metadata,
 
         }
 
@@ -261,3 +264,25 @@ class VolumeApis(BaseAPI):
         validate_volume_name(vol_name)
 
         # TODO need to be implemented
+
+    def volume_list(self, vol_name=None, key=None, value=None):
+        """
+        Get Volume list.
+
+        :param vol_name: (string) volume name
+        :param key: (string) key to filter volumes
+        :param value: (string) value to filter volumes
+        :raises: GlusterAPIError on failure
+        """
+        url = "/v1/volumes"
+        param = {}
+        if vol_name is None:
+            if key:
+                param['key'] = key
+            if value:
+                param['value'] = value
+        else:
+            validate_volume_name(vol_name)
+            url = url + "/" + vol_name
+
+        return self._handle_request(self._get, httplib.OK, url, param=param)
