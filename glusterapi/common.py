@@ -62,10 +62,10 @@ class BaseAPI(object):
 
         return headers
 
-    def _get(self, url):
+    def _get(self, url, param=None):
         headers = self._set_token_in_header('GET', url)
         return requests.get(self.base_url + url, headers=headers,
-                            verify=self.verify)
+                            verify=self.verify, params=param)
 
     def _post(self, url, data):
         headers = self._set_token_in_header('POST', url)
